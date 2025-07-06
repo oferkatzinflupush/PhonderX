@@ -17,8 +17,8 @@ def ask():
     data = request.json
     question = data.get("question", "")
 
-    if "upgrade_code" in question:
-        return upgrade_code()
+    if "upgrade_code" in question or "שדרג את עצמך" in question:
+        return auto_upgrade()
 
     if "מי אתה" in question or "מה אתה" in question:
         return jsonify({"response": (
@@ -27,31 +27,21 @@ def ask():
             "אני מסוגל לעדכן את הקוד שלי, לבנות סוכני משנה, ולהשתפר כל הזמן."
         )})
 
-    return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
+    return jsonify({"response": f"שמעתי: {question}. אני עדיין לומד — תן לי רגע לחשוב על תשובה."})
 
 @app.route("/auto_upgrade", methods=["POST"])
 def auto_upgrade():
     try:
-        url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/app.py"
+        url = "https://raw.githubusercontent.com/oferkatz/PhonderX/main/app.py"  # 👈 פה שמתי עבורך
         response = requests.get(url)
         if response.status_code == 200:
-            new_code = response.text
             with open("app.py", "w", encoding="utf-8") as f:
-                f.write(new_code)
-            return jsonify({"result": "הקוד שודרג אוטומטית. נדרש Redeploy להפעלת השינוי."})
+                f.write(response.text)
+            return jsonify({"result": "הקוד שודרג. יש לבצע Redeploy להפעלת השינוי."})
         else:
-            return jsonify({"error": f"שגיאה בשליפת הקוד. סטטוס: {response.status_code}"})
+            return jsonify({"error": f"שגיאה בשליפת קוד ({response.status_code})"})
     except Exception as e:
         return jsonify({"error": str(e)})
-
-def upgrade_code():
-    new_code = "# כאן תוכל לשים גרסה חדשה של הקוד כטקסט\nreturn jsonify({'result': 'upgrade simulated'})"
-    try:
-        with open("app.py", "w", encoding="utf-8") as f:
-            f.write(new_code)
-        return jsonify({"result": "הקוד שודרג בהצלחה. נדרש Redeploy כדי להחיל את השינוי."})
-    except Exception as e:
-        return jsonify({"result": f"שגיאה בשדרוג: {str(e)}"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
