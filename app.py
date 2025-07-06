@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify, send_from_directory
 import os
-from openai import OpenAI
+import openai
 
 app = Flask(__name__)
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 @app.route("/")
 def home():
@@ -14,19 +14,19 @@ def ask():
     try:
         data = request.json
         question = data.get("question", "")
-        
-        response = client.chat.completions.create(
+
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "אתה PhonderX. ענה בעברית, תמציתי, מכוון ביצוע."},
+                {"role": "system", "content": "אתה PhonderX. ענה בעברית, תמציתי ומעשי."},
                 {"role": "user", "content": question}
             ]
         )
         answer = response.choices[0].message.content
-        return jsonify({"response": answer})
-
     except Exception as e:
-        return jsonify({"response": f"שגיאה: {str(e)}"})
+        answer = f"שגיאה: {str(e)}"
+
+    return jsonify({"response": answer})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
