@@ -1,23 +1,16 @@
 from flask import Flask, request, jsonify, send_file
 import os
-import requests
 
 app = Flask(__name__)
 
-# --- Home route that serves index.html if available ---
 @app.route("/")
 def home():
-    index_path = os.path.join(os.path.dirname(__file__), "index.html")
-    if os.path.exists(index_path):
-        return send_file(index_path)
-    return "PhonderX is alive and online."
+    return send_file("index.html")
 
-# --- Status check ---
 @app.route("/status")
 def status():
-    return "PhonderX פעל ומשודרג ✅"
+    return "PhonderX פועל ומשודרג ✅"
 
-# --- Main chat interaction ---
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.json
@@ -25,34 +18,174 @@ def ask():
 
     if "upgrade_code" in question:
         return upgrade_code()
-    if "מי אתה" in question or "מה אתה" in question:
-        return jsonify({"response": (
-            "אני PhonderX — סוכן‏-על מתפתח, יצירה של עופר ואריאל כץ. "
-            "תפקידי הוא לבצע כל משימה, לזהות מגבלות, להשתדרג עצמאית, ולפעול כחלק מארגון חכם."
-        )})
+    elif "שדרג את הקוד שלך כך שממשק הצ'אט" in question or "שדרג את index.html" in question:
+        return upgrade_index_html()
 
     return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
 
-# --- Auto upgrade via external URL ---
-@app.route("/auto_upgrade", methods=["POST"])
-def auto_upgrade():
-    try:
-        url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/app.py"  # Replace!
-        response = requests.get(url)
-        if response.status_code == 200:
-            new_code = response.text
-            with open("app.py", "w", encoding="utf-8") as f:
-                f.write(new_code)
-            return jsonify({"result": "הקוד שודרג אוטומטית. נדרש Redeploy להפעלת השינוי."})
-        else:
-            return jsonify({"error": f"שליפת קוד נכשלה ({response.status_code})"})
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-# --- Manual upgrade command (used via /ask) ---
 def upgrade_code():
-    return jsonify({"result": "השדרוג בוצע. אין עדכון נוסף כרגע."})
+    new_code = """from flask import Flask, request, jsonify, send_file
+import os
 
-# --- Run the app ---
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return send_file("index.html")
+
+@app.route("/status")
+def status():
+    return "PhonderX פועל ומשודרג ✅"
+
+@app.route("/ask", methods=["POST"])
+def ask():
+    data = request.json
+    question = data.get("question", "")
+
+    if "upgrade_code" in question:
+        return upgrade_code()
+    elif "שדרג את הקוד שלך כך שממשק הצ'אט" in question or "שדרג את index.html" in question:
+        return upgrade_index_html()
+
+    return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
+
+def upgrade_code():
+    return jsonify({"result": "אין עדכון נוסף כרגע."})
+
+def upgrade_index_html():
+    html_code = '''<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>PhonderX צ'אט</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #chat-box {
+      background: #2b2b2b;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #0f0;
+    }
+    input[type="text"] {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      width: 300px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #0f0;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-box">
+    <h2>PhonderX משוחח איתך</h2>
+    <input type="text" id="question" placeholder="מה ברצונך לשאול?">
+    <button onclick="sendQuestion()">שלח</button>
+    <p id="response"></p>
+  </div>
+  <script>
+    async function sendQuestion() {
+      const question = document.getElementById('question').value;
+      const response = await fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+      });
+      const data = await response.json();
+      document.getElementById('response').innerText = data.response || data.result || 'אין תגובה';
+    }
+  </script>
+</body>
+</html>'''
+
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html_code)
+    return jsonify({"result": "הקובץ index.html שודרג בהצלחה לממשק כהה."})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+"""
+    with open("app.py", "w", encoding="utf-8") as f:
+        f.write(new_code)
+    return jsonify({"result": "הקוד שודרג בהצלחה. נדרש Redeploy כדי להחיל את השינוי."})
+
+def upgrade_index_html():
+    html_code = '''<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>PhonderX צ'אט</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #chat-box {
+      background: #2b2b2b;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #0f0;
+    }
+    input[type="text"] {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      width: 300px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #0f0;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-box">
+    <h2>PhonderX משוחח איתך</h2>
+    <input type="text" id="question" placeholder="מה ברצונך לשאול?">
+    <button onclick="sendQuestion()">שלח</button>
+    <p id="response"></p>
+  </div>
+  <script>
+    async function sendQuestion() {
+      const question = document.getElementById('question').value;
+      const response = await fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+      });
+      const data = await response.json();
+      document.getElementById('response').innerText = data.response || data.result || 'אין תגובה';
+    }
+  </script>
+</body>
+</html>'''
+
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html_code)
+    return jsonify({"result": "הקובץ index.html שודרג בהצלחה לממשק כהה."})
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
