@@ -11,22 +11,22 @@ def home():
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    data = request.json
-    question = data.get("question", "")
-
     try:
+        data = request.json
+        question = data.get("question", "")
+        
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "אתה PhonderX. סוכן־על בעברית"},
+                {"role": "system", "content": "אתה PhonderX. ענה בעברית, תמציתי, מכוון ביצוע."},
                 {"role": "user", "content": question}
             ]
         )
         answer = response.choices[0].message.content
-    except Exception as e:
-        answer = f"שגיאה מהשרת: {str(e)}"
+        return jsonify({"response": answer})
 
-    return jsonify({"response": answer})
+    except Exception as e:
+        return jsonify({"response": f"שגיאה: {str(e)}"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
