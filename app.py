@@ -6,13 +6,24 @@ import json
 app = Flask(__name__)
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-# פונקציית תיעוד שדרוג עצמי
+MEMORY_FILE = "memory.json"
+
+# תיעוד מגבלות
 def log_limitation(question, reason):
-    with open("memory.json", "a", encoding="utf-8") as f:
+    with open(MEMORY_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps({
             "שאלה": question,
             "למה הוא נכשל": reason
         }, ensure_ascii=False) + "\n")
+
+# שליפה של כל הזיכרון
+def get_limitations():
+    if not os.path.exists(MEMORY_FILE):
+        return "אין לי תיעוד של בעיות כרגע."
+    
+    with open(MEMORY_FILE, encoding="utf-8") as f:
+        lines = f.readlines()
+        return "\n".join(lines) if lines else "אין לי תיעוד של בעיות כרגע."
 
 @app.route("/")
 def home():
@@ -24,15 +35,19 @@ def ask():
         data = request.json
         question = data.get("question", "")
 
+        # אם המשתמש שואל על המגבלות של PhonderX
+        if "מה לא הצלחת" in question or "מה לא הצליח" in question or "מה אתה לא יודע" in question:
+            return jsonify({"response": get_limitations()})
+
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {
                     "role": "system",
                     "content": (
-                        "אתה PhonderX — סוכן־על שנוצר על ידי עופר ואריאל כץ. "
-                        "תפקידך לזהות בעיות, להפעיל סוכנים תחתיך, להשתדרג ולהתמודד עם כל אתגר. "
-                        "אם אינך יודע משהו — תעד את זה לתוך 'memory.json' כדי לעזור לשדרוג עתידי."
+                        "אתה PhonderX — סוכן־על שלומד, זוכר, מתעד ומפעיל סוכנים. "
+                        "אם אינך מצליח לבצע משימה, אתה מתעד אותה לזיכרון פנימי. "
+                        "אם נשאלת שאלה על מגבלותיך — קרא מתוך הזיכרון ושקף את זה."
                     )
                 },
                 {"role": "user", "content": question}
