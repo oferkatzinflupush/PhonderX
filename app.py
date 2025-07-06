@@ -6,8 +6,8 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "PhonderX is alive and online."
-
+    return send_file("index.html")
+    
 @app.route("/status")
 def status():
     return "PhonderX פועל ומשודרג ✅"
