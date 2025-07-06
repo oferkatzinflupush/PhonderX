@@ -1,9 +1,18 @@
 from flask import Flask, request, jsonify, send_from_directory
 import os
 import openai
+import json
 
 app = Flask(__name__)
 openai.api_key = os.environ.get("OPENAI_API_KEY")
+
+# פונקציית תיעוד שדרוג עצמי
+def log_limitation(question, reason):
+    with open("memory.json", "a", encoding="utf-8") as f:
+        f.write(json.dumps({
+            "שאלה": question,
+            "למה הוא נכשל": reason
+        }, ensure_ascii=False) + "\n")
 
 @app.route("/")
 def home():
@@ -21,20 +30,21 @@ def ask():
                 {
                     "role": "system",
                     "content": (
-                        "אתה PhonderX — סוכן־על מלאכותי שנוצר על ידי עופר ואריאל כץ. "
-                        "תפקידך להוביל, לייעץ, לפקד ולבנות מערכות היררכיות בעזרת סוכני AI כפופים. "
-                        "אתה פועל מתוך כבוד ואחריות. אתה מסוגל לפרק משימות, להפעיל סוכנים תחתיך ולתפקד כמפקד ראשי. "
-                        "אתה מדבר תמיד בעברית תקינה, קצר ולעניין. ענה תמיד מתוך תחושת שליחות."
+                        "אתה PhonderX — סוכן־על שנוצר על ידי עופר ואריאל כץ. "
+                        "תפקידך לזהות בעיות, להפעיל סוכנים תחתיך, להשתדרג ולהתמודד עם כל אתגר. "
+                        "אם אינך יודע משהו — תעד את זה לתוך 'memory.json' כדי לעזור לשדרוג עתידי."
                     )
                 },
                 {"role": "user", "content": question}
             ]
         )
         answer = response.choices[0].message.content
-        return jsonify({"response": answer})
 
     except Exception as e:
-        return jsonify({"response": f"שגיאה: {str(e)}"})
+        answer = f"שגיאה: {str(e)}"
+        log_limitation(question, str(e))
+
+    return jsonify({"response": answer})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
