@@ -16,14 +16,22 @@ def log_limitation(question, reason):
             "למה הוא נכשל": reason
         }, ensure_ascii=False) + "\n")
 
-# שליפה של כל הזיכרון
+# שליפת מגבלות
 def get_limitations():
     if not os.path.exists(MEMORY_FILE):
         return "אין לי תיעוד של מגבלות כרגע."
-    
     with open(MEMORY_FILE, encoding="utf-8") as f:
         lines = f.readlines()
         return "\n".join(lines) if lines else "אין לי תיעוד של מגבלות כרגע."
+
+# שדרוג עצמי
+def upgrade_code(filename, new_code):
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(new_code)
+        return f"קובץ {filename} עודכן בהצלחה."
+    except Exception as e:
+        return f"שגיאה בשדרוג עצמי: {str(e)}"
 
 @app.route("/")
 def home():
@@ -35,7 +43,7 @@ def ask():
         data = request.json
         question = data.get("question", "")
 
-        # זיהוי אם זו שאלה על מגבלות
+        # קריאת מגבלות אם המשתמש שואל על זה
         if any(phrase in question for phrase in [
             "מה לא הצלחת", "מה לא הצליח", "מה אתה לא יודע",
             "מה הדברים שאתה לא יודע לעשות", "מה אתה עוד לא יודע",
@@ -43,21 +51,29 @@ def ask():
         ]):
             return jsonify({"response": get_limitations()})
 
+        # קריאה ל-GPT
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {
                     "role": "system",
                     "content": (
-                        "אתה PhonderX — סוכן־על שנוצר על ידי עופר ואריאל כץ. "
-                        "משימתך: לנתח, לתכנן, לפקד, לתעד מגבלות, ללמוד ולשפר את עצמך. "
-                        "אתה עונה בעברית תקינה, מתוך אחריות ומודעות עצמית."
+                        "אתה PhonderX — סוכן־על מתפתח שנוצר על ידי עופר ואריאל כץ. "
+                        "אם יש שגיאה בקוד, תתעד אותה ל־memory.json. "
+                        "אם אתה מתבקש לשנות את הקוד שלך, תוכל לכתוב אותו כטקסט ולשלוח אותו למשתמש."
                     )
                 },
                 {"role": "user", "content": question}
             ]
         )
+
         answer = response.choices[0].message.content
+
+        # תנאי שיאפשר בעתיד להריץ upgrade אוטומטי (ידרוש אישור או מודול אבטחה)
+        if "upgrade_code(" in answer and "```" in answer:
+            code_block = answer.split("```")[1]
+            upgrade_result = upgrade_code("app.py", code_block)
+            answer += f"\n\n[בוצע שדרוג]: {upgrade_result}"
 
     except Exception as e:
         answer = f"שגיאה: {str(e)}"
