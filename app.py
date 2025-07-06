@@ -1,47 +1,69 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 import os
-import requests
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return send_file("index.html")
+    return "PhonderX פועל ומשודרג ✅"
 
 @app.route("/status")
 def status():
-    return "PhonderX פעול ומשודרג ✅"
+    return "PhonderX תקין ✅"
 
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.json
-    question = data.get("question", "").lower()
+    question = data.get("question", "")
 
-    if any(kw in question for kw in ["upgrade_code", "תשדרג את עצמך", "שדרג את עצמך", "התעל שדרוג"]):
-        return auto_upgrade()
+    if "שדרג את עצמך" in question:
+        return upgrade_code()
 
-    if any(kw in question for kw in ["מי אתה", "מה אתה"]):
-        return jsonify({"response": (
-            "אני PhonderX — סוכן‏-על משודרג, יצירה של עופר ואריאל כץ. "
-            "תפקידי הוא לבצע כל משימה, לזהות מגבלות, להשתדרג עצמית, ולפעל כחלק מארגון חכם."
-        )})
+    log_interaction(question)
 
     return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
 
-@app.route("/auto_upgrade", methods=["POST"])
-def auto_upgrade():
+def upgrade_code():
     try:
-        url = "https://raw.githubusercontent.com/oferkatzinflux/phonderx/main/app.py"
-        response = requests.get(url)
-        if response.status_code == 200:
-            new_code = response.text
-            with open("app.py", "w", encoding="utf-8") as f:
-                f.write(new_code)
-            return jsonify({"result": "קוד המועדן הצלחה. אנא עשה Redeploy כדי להפעיל."})
-        else:
-            return jsonify({"error": f"שגיאה בשליפה מהכתובת. Status: {response.status_code}"})
+        new_code = """from flask import Flask, request, jsonify
+import os
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "PhonderX פועל ומשודרג ✅"
+
+@app.route("/status")
+def status():
+    return "PhonderX פועל באופן מלא ✅"
+
+@app.route("/ask", methods=["POST"])
+def ask():
+    data = request.json
+    question = data.get("question", "")
+    log_interaction(question)
+    return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
+
+def log_interaction(text):
+    with open("logs.txt", "a", encoding="utf-8") as f:
+        f.write(text + "\\n")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+"""
+        with open("app.py", "w", encoding="utf-8") as f:
+            f.write(new_code)
+        return jsonify({"result": "הקוד שודרג בהצלחה. נדרש redeploy להפעלה מחדש."})
     except Exception as e:
-        return jsonify({"error": f"שגיאה: {str(e)}"})
+        return jsonify({"error": str(e)})
+
+def log_interaction(text):
+    try:
+        with open("logs.txt", "a", encoding="utf-8") as f:
+            f.write(text + "\n")
+    except:
+        pass
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
