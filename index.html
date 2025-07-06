@@ -1,37 +1,28 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>PhonderX Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhonderX צ׳אט</title>
 </head>
-<body style="font-family: sans-serif; direction: rtl; padding: 2em; max-width: 600px; margin: auto;">
-  <h2>שלח הודעה ל-PhonderX</h2>
-  <form id="phonderForm">
-    <label for="question">מה אתה רוצה לשאול את PhonderX?</label><br><br>
-    <input type="text" id="question" name="question" style="width: 100%; padding: 10px; font-size: 16px;" required>
-    <br><br>
-    <button type="submit" style="padding: 12px 24px; font-size: 16px;">שלח</button>
-  </form>
-  <br>
-  <div id="response" style="white-space: pre-wrap; background: #f1f1f1; padding: 1em; border-radius: 8px;"></div>
+<body>
+  <h1>שלח הודעה ל־PhonderX</h1>
+  <p>מה אתה רוצה לשאול את PhonderX?</p>
+  <input type="text" id="question" placeholder="כתוב כאן..." style="width: 300px;" />
+  <button onclick="send()">שלח</button>
+  <p id="response"></p>
 
   <script>
-    document.getElementById('phonderForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const question = document.getElementById('question').value;
-      const resBox = document.getElementById('response');
-      resBox.innerText = "שולח שאלה ל-PhonderX...";
-
-      const response = await fetch("/ask", {
+    async function send() {
+      const q = document.getElementById("question").value;
+      const res = await fetch("/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: question })
+        body: JSON.stringify({ question: q })
       });
-
-      const data = await response.json();
-      resBox.innerText = data.response;
-    });
+      const data = await res.json();
+      document.getElementById("response").innerText = data.response || data.result || "אין תגובה";
+    }
   </script>
 </body>
 </html>
