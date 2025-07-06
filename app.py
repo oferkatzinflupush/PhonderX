@@ -1,53 +1,86 @@
-from flask import Flask, request, jsonify, send_file
-import os
-import openai
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhonderX Chat</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    #chat-container {
+      background: #1a1a1a;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 0 10px #00ff88;
+      width: 90%;
+      max-width: 500px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      border-radius: 0.5rem;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 0.5rem;
+      background-color: #00ff88;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    #response {
+      margin-top: 1rem;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <h2>PhonderX משוחח איתך</h2>
+    <input type="text" id="question" placeholder="מה ברצונך לשאול?">
+    <button onclick="sendQuestion()">שלח</button>
+    <div id="response"></div>
+  </div>
 
-app = Flask(__name__)
-openai.api_key = os.environ.get("OPENAI_API_KEY")
-
-@app.route("/")
-def home():
-    return send_file("index.html")
-
-@app.route("/status")
-def status():
-    return "PhonderX פועל ומשודרג ✅"
-
-@app.route("/ask", methods=["POST"])
-def ask():
-    data = request.json
-    question = data.get("question", "")
-
-    if "שדרג את הממשק" in question or "תשנה את הצ'אט" in question or "כתוב ממשק חדש" in question:
-        return generate_and_save_ui(question)
-
-    if "מי אתה" in question or "מה אתה" in question:
-        return jsonify({"response": (
-            "אני PhonderX — סוכן־על מתפתח, יצירה של עופר ואריאל כץ. "
-            "תפקידי הוא לבצע כל משימה, לזהות מגבלות, להשתדרג עצמאית, ולפעול כחלק מארגון חכם. "
-            "אני מסוגל לעדכן את הקוד שלי, לבנות סוכני משנה, ולהשתפר כל הזמן."
-        )})
-
-    return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
-
-def generate_and_save_ui(prompt):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "כתוב קובץ HTML מלא לפי הבקשה, בלי הסברים. התחל ב-<!DOCTYPE html>."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        html_code = response.choices[0].message.content
-        if "<!DOCTYPE html>" in html_code:
-            with open("index.html", "w", encoding="utf-8") as f:
-                f.write(html_code)
-            return jsonify({"result": "✅ הקובץ index.html שודרג לפי ההוראה."})
-        else:
-            return jsonify({"error": "לא נוצר קוד HTML תקני."})
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+  <script>
+    async function sendQuestion() {
+      const question = document.getElementById('question').value;
+      const responseDiv = document.getElementById('response');
+      responseDiv.innerText = "טוען תגובה...";
+      try {
+        const res = await fetch('/ask', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ question })
+        });
+        const data = await res.json();
+        responseDiv.innerText = data.response || data.result || "לא התקבלה תגובה.";
+      } catch (e) {
+        responseDiv.innerText = "שגיאה בשליחה: " + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
