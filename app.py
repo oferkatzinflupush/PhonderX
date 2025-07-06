@@ -19,11 +19,11 @@ def log_limitation(question, reason):
 # שליפה של כל הזיכרון
 def get_limitations():
     if not os.path.exists(MEMORY_FILE):
-        return "אין לי תיעוד של בעיות כרגע."
+        return "אין לי תיעוד של מגבלות כרגע."
     
     with open(MEMORY_FILE, encoding="utf-8") as f:
         lines = f.readlines()
-        return "\n".join(lines) if lines else "אין לי תיעוד של בעיות כרגע."
+        return "\n".join(lines) if lines else "אין לי תיעוד של מגבלות כרגע."
 
 @app.route("/")
 def home():
@@ -35,8 +35,12 @@ def ask():
         data = request.json
         question = data.get("question", "")
 
-        # אם המשתמש שואל על המגבלות של PhonderX
-        if "מה לא הצלחת" in question or "מה לא הצליח" in question or "מה אתה לא יודע" in question:
+        # זיהוי אם זו שאלה על מגבלות
+        if any(phrase in question for phrase in [
+            "מה לא הצלחת", "מה לא הצליח", "מה אתה לא יודע",
+            "מה הדברים שאתה לא יודע לעשות", "מה אתה עוד לא יודע",
+            "מה לא עבד", "מה המשימות שלא הצלחת", "מה קרה כשלא הצלחת"
+        ]):
             return jsonify({"response": get_limitations()})
 
         response = openai.ChatCompletion.create(
@@ -45,9 +49,9 @@ def ask():
                 {
                     "role": "system",
                     "content": (
-                        "אתה PhonderX — סוכן־על שלומד, זוכר, מתעד ומפעיל סוכנים. "
-                        "אם אינך מצליח לבצע משימה, אתה מתעד אותה לזיכרון פנימי. "
-                        "אם נשאלת שאלה על מגבלותיך — קרא מתוך הזיכרון ושקף את זה."
+                        "אתה PhonderX — סוכן־על שנוצר על ידי עופר ואריאל כץ. "
+                        "משימתך: לנתח, לתכנן, לפקד, לתעד מגבלות, ללמוד ולשפר את עצמך. "
+                        "אתה עונה בעברית תקינה, מתוך אחריות ומודעות עצמית."
                     )
                 },
                 {"role": "user", "content": question}
