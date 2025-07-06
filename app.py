@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify, send_from_directory
 import os
-import openai
+from openai import OpenAI
 
 app = Flask(__name__)
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 @app.route("/")
 def home():
@@ -13,13 +14,11 @@ def ask():
     data = request.json
     question = data.get("question", "")
 
-    openai.api_key = os.environ.get("OPENAI_API_KEY")
-
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "אתה PhonderX, סוכן־על ארגוני שמשרת את עופר כץ. אתה עונה בעברית ונותן ייעוץ חכם ואנושי."},
+                {"role": "system", "content": "אתה PhonderX. סוכן־על בעברית"},
                 {"role": "user", "content": question}
             ]
         )
