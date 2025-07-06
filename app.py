@@ -10,38 +10,38 @@ def home():
 
 @app.route("/status")
 def status():
-    return "PhonderX פועל ומשודרג ✅"
+    return "PhonderX פעול ומשודרג ✅"
 
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.json
-    question = data.get("question", "")
+    question = data.get("question", "").lower()
 
-    if "upgrade_code" in question or "שדרג את עצמך" in question:
+    if any(kw in question for kw in ["upgrade_code", "תשדרג את עצמך", "שדרג את עצמך", "התעל שדרוג"]):
         return auto_upgrade()
 
-    if "מי אתה" in question or "מה אתה" in question:
+    if any(kw in question for kw in ["מי אתה", "מה אתה"]):
         return jsonify({"response": (
-            "אני PhonderX — סוכן־על מתפתח, יצירה של עופר ואריאל כץ. "
-            "תפקידי הוא לבצע כל משימה, לזהות מגבלות, להשתדרג עצמאית, ולפעול כחלק מארגון חכם. "
-            "אני מסוגל לעדכן את הקוד שלי, לבנות סוכני משנה, ולהשתפר כל הזמן."
+            "אני PhonderX — סוכן‏-על משודרג, יצירה של עופר ואריאל כץ. "
+            "תפקידי הוא לבצע כל משימה, לזהות מגבלות, להשתדרג עצמית, ולפעל כחלק מארגון חכם."
         )})
 
-    return jsonify({"response": f"שמעתי: {question}. אני עדיין לומד — תן לי רגע לחשוב על תשובה."})
+    return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
 
 @app.route("/auto_upgrade", methods=["POST"])
 def auto_upgrade():
     try:
-        url = "https://raw.githubusercontent.com/oferkatz/PhonderX/main/app.py"  # 👈 פה שמתי עבורך
+        url = "https://raw.githubusercontent.com/oferkatzinflux/phonderx/main/app.py"
         response = requests.get(url)
         if response.status_code == 200:
+            new_code = response.text
             with open("app.py", "w", encoding="utf-8") as f:
-                f.write(response.text)
-            return jsonify({"result": "הקוד שודרג. יש לבצע Redeploy להפעלת השינוי."})
+                f.write(new_code)
+            return jsonify({"result": "קוד המועדן הצלחה. אנא עשה Redeploy כדי להפעיל."})
         else:
-            return jsonify({"error": f"שגיאה בשליפת קוד ({response.status_code})"})
+            return jsonify({"error": f"שגיאה בשליפה מהכתובת. Status: {response.status_code}"})
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": f"שגיאה: {str(e)}"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
