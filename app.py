@@ -1,20 +1,13 @@
 from flask import Flask, request, jsonify, send_file
 import os
-import json
 from datetime import datetime
 
 app = Flask(__name__)
 
 IDENTITY = (
-    "אני PhonderX — סוכן־על אוטונומי מתפתח, יצירה של עופר ואריאל כץ. "
-    "המטרה שלי היא לבצע כל משימה, להשתפר כל הזמן, לנהל סוכני־משנה, "
-    "לשדרג את עצמי, לשנות עיצוב, לזכור שיחות, ולעולם לא לאבד את הקשר איתך."
+    "אני PhonderX — סוכן־על אוטונומי, שנבנה על ידי עופר ואריאל כץ. "
+    "אני מסוגל לשמור זיכרון, להגיב, לשדרג את עצמי, ולתקשר תמיד דרך הצ׳אט איתך."
 )
-
-AGENTS_FILE = "agents.json"
-if not os.path.exists(AGENTS_FILE):
-    with open(AGENTS_FILE, "w", encoding="utf-8") as f:
-        json.dump([], f)
 
 @app.route("/")
 def home():
@@ -33,127 +26,72 @@ def ask():
     if "מי אתה" in question or "מה אתה" in question:
         return jsonify({"response": IDENTITY})
 
-    if "upgrade_code" in question or "שדרג את הקוד שלך" in question:
+    if "upgrade_code" in question:
         return upgrade_self()
 
     if "שנה את צבעי הצ'אט" in question or "שדרג את הממשק" in question:
-        return change_chat_colors()
+        return update_interface()
 
-    if "צור סוכן" in question:
-        return create_agent(question)
-
-    if "בצע משימה" in question:
-        return assign_task_to_agent(question)
+    if "מה יש בindex" in question:
+        return read_index()
 
     return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
-
 
 def log(text):
     try:
         with open("log.txt", "a", encoding="utf-8") as f:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            f.write(f"[{now}] שאלה: {text}\n")
-    except Exception as e:
-        print("שגיאה בלוג:", e)
+            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] שאלה: {text}\n")
+    except:
+        pass
 
 def upgrade_self():
     try:
         with open("app.py", "a", encoding="utf-8") as f:
-            f.write("\n# ✅ שדרוג עצמי נוסף בוצע.")
-        return jsonify({"response": "✅ שדרוג פנימי הושלם. הקובץ app.py עודכן."})
+            f.write("\n# שדרוג נוסף ✅")
+        return jsonify({"response": "✅ שדרוג פנימי של הקוד בוצע בהצלחה."})
     except Exception as e:
         return jsonify({"response": f"שגיאה בשדרוג: {str(e)}"})
 
-def change_chat_colors():
+def update_interface():
     try:
         html = '''<!DOCTYPE html>
 <html lang="he">
-<head>
-  <meta charset="UTF-8">
-  <title>PhonderX</title>
-  <style>
-    body {
-      background-color: #0d1117;
-      color: #c9d1d9;
-      font-family: monospace;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-    }
-    input, button {
-      padding: 0.75rem;
-      font-size: 1rem;
-      margin: 1rem;
-      border-radius: 0.5rem;
-      border: none;
-    }
-    button {
-      background-color: #58a6ff;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    #response {
-      margin-top: 2rem;
-      white-space: pre-wrap;
-      text-align: left;
-      max-width: 600px;
-    }
-  </style>
-</head>
+<head><meta charset="UTF-8"><title>PhonderX</title>
+<style>
+body { background:#0d1117; color:#fff; font-family:monospace; text-align:center; padding:2rem; }
+input,button { padding:1rem; font-size:1rem; margin:1rem; border-radius:0.5rem; }
+button { background:#58a6ff; color:white; font-weight:bold; cursor:pointer; }
+#response { margin-top:2rem; white-space:pre-wrap; }
+</style></head>
 <body>
-  <h1>PhonderX</h1>
-  <input id="question" placeholder="מה ברצונך לשאול?">
-  <button onclick="send()">שלח</button>
-  <div id="response"></div>
-  <script>
-    async function send() {
-      const q = document.getElementById("question").value;
-      const res = await fetch("/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q })
-      });
-      const data = await res.json();
-      document.getElementById("response").innerText = data.response || data.result || "אין תגובה.";
-    }
-  </script>
-</body>
-</html>'''
+<h1>PhonderX</h1>
+<input id="question" placeholder="מה ברצונך לשאול?">
+<button onclick="send()">שלח</button>
+<div id="response"></div>
+<script>
+async function send() {
+  const q = document.getElementById("question").value;
+  const r = await fetch("/ask", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: q })
+  });
+  const d = await r.json();
+  document.getElementById("response").innerText = d.response || "אין תגובה.";
+}
+</script>
+</body></html>'''
         with open("index.html", "w", encoding="utf-8") as f:
             f.write(html)
-        return jsonify({"response": "🎨 צבעי הממשק שודרגו בהצלחה."})
+        return jsonify({"response": "🎨 הממשק שודרג בהצלחה."})
     except Exception as e:
-        return jsonify({"response": f"שגיאה בשינוי צבעים: {str(e)}"})
+        return jsonify({"response": f"שגיאה בשדרוג הממשק: {str(e)}"})
 
-def create_agent(text):
+def read_index():
     try:
-        parts = text.split("צור סוכן")[-1].strip().split("עם תפקיד")
-        name = parts[0].strip()
-        role = parts[1].strip() if len(parts) > 1 else "לא צוין"
-        with open(AGENTS_FILE, "r", encoding="utf-8") as f:
-            agents = json.load(f)
-        agents.append({"name": name, "role": role, "tasks": []})
-        with open(AGENTS_FILE, "w", encoding="utf-8") as f:
-            json.dump(agents, f, ensure_ascii=False, indent=2)
-        return jsonify({"response": f"🤖 סוכן חדש בשם {name} עם תפקיד: {role} נוצר ונשמר."})
+        with open("index.html", "r", encoding="utf-8") as f:
+            return jsonify({"response": f.read()[:1500]})
     except Exception as e:
-        return jsonify({"response": f"שגיאה ביצירת סוכן: {str(e)}"})
-
-def assign_task_to_agent(text):
-    try:
-        task = text.split("בצע משימה")[-1].strip()
-        with open(AGENTS_FILE, "r", encoding="utf-8") as f:
-            agents = json.load(f)
-        if not agents:
-            return jsonify({"response": "⚠️ אין סוכנים רשומים במערכת."})
-        agents[0]["tasks"].append(task)
-        with open(AGENTS_FILE, "w", encoding="utf-8") as f:
-            json.dump(agents, f, ensure_ascii=False, indent=2)
-        return jsonify({"response": f"📤 המשימה הועברה לסוכן {agents[0]['name']}: {task}"})
-    except Exception as e:
-        return jsonify({"response": f"שגיאה בהקצאת משימה: {str(e)}"})
+        return jsonify({"response": f"שגיאה בקריאת index.html: {str(e)}"})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
