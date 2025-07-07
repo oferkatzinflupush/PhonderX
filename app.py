@@ -1,98 +1,72 @@
 from flask import Flask, request, jsonify, send_file
 import os
-from datetime import datetime
+import datetime
 
 app = Flask(__name__)
 
 IDENTITY = (
-    "אני PhonderX — סוכן־על אוטונומי, שנבנה על ידי עופר ואריאל כץ. "
-    "אני מסוגל לשמור זיכרון, להגיב, לשדרג את עצמי, ולתקשר תמיד דרך הצ׳אט איתך."
+    "אני PhonderX — סוכן-על אוטונומי שנוצר על ידי עופר ואריאל כץ. "
+    "תפקידי הוא לבצע כל משימה, לזהות מגבלות, לשדרג את עצמי עצמאית, ולבנות סוכני משנה. "
+    "אני מתפתח כל הזמן ומסוגל לשלוט בקוד שלי ובממשק הצ'אט שלי דרך פקודות טקסט."
 )
 
 @app.route("/")
 def home():
-    return send_file("index.html") if os.path.exists("index.html") else "PhonderX פעיל ✅"
-
-@app.route("/status")
-def status():
-    return "PhonderX פועל ומוכן 🧠"
+    return send_file("index.html")
 
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.json
-    question = data.get("question", "").strip()
-    log(question)
+    question = data.get("question", "")
 
-    if "מי אתה" in question or "מה אתה" in question:
+    if any(cmd in question for cmd in ["upgrade_code", "שדרג את עצמך", "שדרוג קוד"]):
+        return upgrade_code()
+    if "מה יש בקובץ index.html" in question:
+        return jsonify({"response": read_file("index.html")})
+    if "מי יצר אותך" in question or "מי אתה" in question:
         return jsonify({"response": IDENTITY})
 
-    if "upgrade_code" in question:
-        return upgrade_self()
-
-    if "שנה את צבעי הצ'אט" in question or "שדרג את הממשק" in question:
-        return update_interface()
-
-    if "מה יש בindex" in question:
-        return read_index()
+    try:
+        with open("log.txt", "a", encoding="utf-8") as log:
+            timestamp = datetime.datetime.now().isoformat()
+            log.write(f"[{timestamp}] שאלה: {question}\n")
+    except Exception as e:
+        try:
+            with open("log_errors.txt", "a", encoding="utf-8") as err_log:
+                err_log.write(f"שגיאה בלוג: {str(e)}\n")
+        except:
+            pass
 
     return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
 
-def log(text):
+@app.route("/status")
+def status():
+    return "PhonderX פועל, משודרג ומוכן לשדרוג נוסף."
+
+@app.route("/auto_upgrade", methods=["POST"])
+def upgrade_code():
     try:
-        with open("log.txt", "a", encoding="utf-8") as f:
-            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] שאלה: {text}\n")
+        code = request.json.get("code")
+        if not code:
+            with open("log_errors.txt", "a", encoding="utf-8") as err_log:
+                err_log.write("שדרוג נכשל: לא סופק קוד.\n")
+            return jsonify({"error": "לא סופק קוד לשדרוג."})
+
+        with open("app.py", "w", encoding="utf-8") as f:
+            f.write(code)
+
+        return jsonify({"result": "הקוד שודרג בהצלחה. יש לבצע Redeploy כדי להחיל את השינוי."})
+    except Exception as e:
+        with open("log_errors.txt", "a", encoding="utf-8") as err_log:
+            err_log.write(f"שגיאה בשדרוג: {str(e)}\n")
+        return jsonify({"error": f"שגיאה בשדרוג: {str(e)}"})
+
+def read_file(filename):
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            return f.read()
     except:
-        pass
-
-def upgrade_self():
-    try:
-        with open("app.py", "a", encoding="utf-8") as f:
-            f.write("\n# שדרוג נוסף ✅")
-        return jsonify({"response": "✅ שדרוג פנימי של הקוד בוצע בהצלחה."})
-    except Exception as e:
-        return jsonify({"response": f"שגיאה בשדרוג: {str(e)}"})
-
-def update_interface():
-    try:
-        html = '''<!DOCTYPE html>
-<html lang="he">
-<head><meta charset="UTF-8"><title>PhonderX</title>
-<style>
-body { background:#0d1117; color:#fff; font-family:monospace; text-align:center; padding:2rem; }
-input,button { padding:1rem; font-size:1rem; margin:1rem; border-radius:0.5rem; }
-button { background:#58a6ff; color:white; font-weight:bold; cursor:pointer; }
-#response { margin-top:2rem; white-space:pre-wrap; }
-</style></head>
-<body>
-<h1>PhonderX</h1>
-<input id="question" placeholder="מה ברצונך לשאול?">
-<button onclick="send()">שלח</button>
-<div id="response"></div>
-<script>
-async function send() {
-  const q = document.getElementById("question").value;
-  const r = await fetch("/ask", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question: q })
-  });
-  const d = await r.json();
-  document.getElementById("response").innerText = d.response || "אין תגובה.";
-}
-</script>
-</body></html>'''
-        with open("index.html", "w", encoding="utf-8") as f:
-            f.write(html)
-        return jsonify({"response": "🎨 הממשק שודרג בהצלחה."})
-    except Exception as e:
-        return jsonify({"response": f"שגיאה בשדרוג הממשק: {str(e)}"})
-
-def read_index():
-    try:
-        with open("index.html", "r", encoding="utf-8") as f:
-            return jsonify({"response": f.read()[:1500]})
-    except Exception as e:
-        return jsonify({"response": f"שגיאה בקריאת index.html: {str(e)}"})
+        return "לא הצלחתי לקרוא את הקובץ."
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
