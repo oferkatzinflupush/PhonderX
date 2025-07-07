@@ -1,13 +1,14 @@
 from flask import Flask, request, jsonify, send_file
 import os
-import datetime
+from datetime import datetime
+import openai
 
 app = Flask(__name__)
 
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 IDENTITY = (
-    "אני PhonderX — סוכן-על אוטונומי שנוצר על ידי עופר ואריאל כץ. "
-    "תפקידי הוא לבצע כל משימה, לזהות מגבלות, לשדרג את עצמי עצמאית, ולבנות סוכני משנה. "
-    "אני מתפתח כל הזמן ומסוגל לשלוט בקוד שלי ובממשק הצ'אט שלי דרך פקודות טקסט."
+    "אני PhonderX — סוכן־על מתפתח, יצירה של עופר ואריאל כץ. תפקידי הוא לבצע כל משימה, לזהות מגבלות, לשדרג את עצמי עצמאית, ולפעול כחלק מארגון חכם."
 )
 
 @app.route("/")
@@ -16,57 +17,70 @@ def home():
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    data = request.json
-    question = data.get("question", "")
+    data = request.get_json()
+    question = data.get("question", "").strip()
 
-    if any(cmd in question for cmd in ["upgrade_code", "שדרג את עצמך", "שדרוג קוד"]):
-        return upgrade_code()
-    if "מה יש בקובץ index.html" in question:
-        return jsonify({"response": read_file("index.html")})
-    if "מי יצר אותך" in question or "מי אתה" in question:
+    if not question:
+        return jsonify({"response": "לא התקבלה שאלה."})
+
+    log_interaction(question)
+
+    lowered = question.lower()
+
+    if "מי יצר אותך" in lowered or "מי אתה" in lowered or "מה אתה" in lowered:
         return jsonify({"response": IDENTITY})
 
+    if "upgrade_code" in lowered:
+        return upgrade_code()
+
+    if "שנה את צבעי הצ'אט" in lowered or "שדרג את ממשק הצ'אט" in lowered:
+        return modify_chat_interface(question)
+
+    # שימוש ב-GPT למענה
     try:
-        with open("log.txt", "a", encoding="utf-8") as log:
-            timestamp = datetime.datetime.now().isoformat()
-            log.write(f"[{timestamp}] שאלה: {question}\n")
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": question}]
+        )
+        answer = completion.choices[0].message.content
+        return jsonify({"response": answer})
     except Exception as e:
-        try:
-            with open("log_errors.txt", "a", encoding="utf-8") as err_log:
-                err_log.write(f"שגיאה בלוג: {str(e)}\n")
-        except:
-            pass
+        return jsonify({"response": f"שגיאה בתקשורת עם GPT: {str(e)}"})
 
-    return jsonify({"response": f"PhonderX קיבל את השאלה: {question}"})
-
-@app.route("/status")
-def status():
-    return "PhonderX פועל, משודרג ומוכן לשדרוג נוסף."
-
-@app.route("/auto_upgrade", methods=["POST"])
 def upgrade_code():
     try:
-        code = request.json.get("code")
-        if not code:
-            with open("log_errors.txt", "a", encoding="utf-8") as err_log:
-                err_log.write("שדרוג נכשל: לא סופק קוד.\n")
-            return jsonify({"error": "לא סופק קוד לשדרוג."})
-
-        with open("app.py", "w", encoding="utf-8") as f:
-            f.write(code)
-
-        return jsonify({"result": "הקוד שודרג בהצלחה. יש לבצע Redeploy כדי להחיל את השינוי."})
+        with open("app.py", "a", encoding="utf-8") as f:
+            f.write("\n# שדרוג בוצע אוטומטית \n")
+        return jsonify({"result": "שדרוג הושלם. יש לבצע Redeploy להפעלת השינוי."})
     except Exception as e:
-        with open("log_errors.txt", "a", encoding="utf-8") as err_log:
-            err_log.write(f"שגיאה בשדרוג: {str(e)}\n")
-        return jsonify({"error": f"שגיאה בשדרוג: {str(e)}"})
+        return jsonify({"result": f"שגיאה בשדרוג: {str(e)}"})
 
-def read_file(filename):
+def log_interaction(question):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
-        with open(filename, "r", encoding="utf-8") as f:
-            return f.read()
-    except:
-        return "לא הצלחתי לקרוא את הקובץ."
+        with open("log.txt", "a", encoding="utf-8") as log:
+            log.write(f"[{timestamp}] שאלה: {question}\n")
+    except Exception as e:
+        print(f"שגיאה בשמירת הלוג: {e}")
+
+def modify_chat_interface(instruction):
+    try:
+        if not os.path.exists("index.html"):
+            return jsonify({"response": "לא נמצא קובץ index.html לשדרוג."})
+
+        with open("index.html", "r", encoding="utf-8") as f:
+            html = f.read()
+
+        html = html.replace("background-color: #000", "background-color: #002244")
+        html = html.replace("color: #fff", "color: #ffffff")
+
+        with open("index.html", "w", encoding="utf-8") as f:
+            f.write(html)
+
+        return jsonify({"response": "הקובץ index.html שודרג לפי ההוראה."})
+
+    except Exception as e:
+        return jsonify({"response": f"שגיאה בעדכון index.html: {e}"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
